@@ -40,22 +40,19 @@ def sparseImage(image):
                 newImage[i,j] = 1
     return newImage
 
-
+def createHeatMap64(image, sigma = 7):
+    heatMap = conv2grayFrR(image)
+    heatMap1 = gaussianConv(heatMap, sigma)
+    heatMap2 = scaleHeatmap(heatMap1, (64,64))
+    return heatMap2
 
 #TEST
 
-'''image = io.imread(os.path.abspath('CellsDataset/001dots.png'))
+image = io.imread(os.path.abspath('CellsDataset/001dots.png'))
 
-grayImage = conv2grayFrR(image)
-gaussImage = gaussianConv(grayImage, 7)
-scaledImage = scaleHeatmap(gaussImage, (64,64))
 
-print(grayImage.sum()/255)
-print(gaussImage.sum())
-print(scaledImage.sum())
 
-plt.imshow(gaussImage)
-plt.show()'''
+
 
 
 
