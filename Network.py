@@ -23,11 +23,11 @@ class BaselineNet(torch.nn.Module):
        self.conv3 = nn.Conv2d(64,1,kernel_size=3, padding=1)
 
    def forward(self, x):
-       #in_size = x.shape[0]
+       in_size = x.shape[0]
        x = F.relu(self.maxPool1(self.conv1(x)))
        x = F.relu(self.maxPool2(self.conv2(x)))
        x = self.conv3(x)
-       #x = x.view(in_size,-1)
+       x = x.view(in_size,-1)
        return x
 
    def num_flat_features(self, x):
@@ -41,7 +41,6 @@ class BaselineNet(torch.nn.Module):
 net = BaselineNet().to(device)
 
 
-
 #TRAINING
 cellsDataset = CellsDataset(csv_file = 'cells_landmarks.csv', root_dir = 'CellsDataset/', transform=ToTensor())
 dataloader = DataLoader(cellsDataset, batch_size=4, shuffle=True, num_workers=4)
@@ -53,8 +52,9 @@ for epoch in range(2):  # loop over the dataset multiple times
     running_loss = 0.0
     for i, data in enumerate(dataloader, 0):
         # get the inputs
-        inputs, labels = data
-        print(data)
+        inputs = data['image']
+        labels = data['landmarks']
+
         # zero the parameter gradients
         optimizer.zero_grad()
 
@@ -78,6 +78,7 @@ print('Finished Training')
 #TEST
 '''sample = cellsDataset[0]['image']
 sample = sample.float()
+print(type(sample))
 sample = sample[2,:,:] #greyScale
 print(sample.shape)
 sample = sample.unsqueeze(0).unsqueeze(1)

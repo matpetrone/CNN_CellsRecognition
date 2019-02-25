@@ -10,7 +10,7 @@ import plotly.plotly as py
 import plotly.graph_objs as go
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
-from ImageProcessing import createHeatMap64
+from ImageProcessing import createHeatMap64, conv2grayFrB
 np.set_printoptions(threshold=np.nan)
 
 
@@ -28,6 +28,7 @@ class CellsDataset(Dataset):
     def __getitem__(self, idx):
         img_path = os.path.join(self.root_dir, self.landmarks_frame.iloc[idx, 0])
         image = io.imread(img_path)
+        image = conv2grayFrB(image)
         dots_path = os.path.join(self.root_dir, convertFileName(self.landmarks_frame.iloc[idx, 0]))
         landmarks = io.imread(dots_path)
         landmarks = createHeatMap64(landmarks)
@@ -91,6 +92,7 @@ class ToTensor(object):
         # numpy image: H x W x C
         # torch image: C X H X W
         image = image.transpose((2, 0, 1))
+        landmarks = landmarks.transpose ((2,0,1))
         return {'image': torch.from_numpy(image), 'landmarks': torch.from_numpy(landmarks)}
 
 def convertFileName(string1):
@@ -106,52 +108,10 @@ def convertFileName(string1):
 
 #TEST
 
-cells_dataset = CellsDataset(csv_file = 'cells_landmarks.csv', root_dir = 'CellsDataset/', transform = ToTensor())
 
-
-for i in range(len(cells_dataset)):
-    sample = cells_dataset[i]
-
-    print(i, sample['image'].size(), sample['landmarks'].size())
-
-    if i == 3:
-        break
-
-dataloader = DataLoader(cells_dataset, batch_size=4,shuffle=True, num_workers=4)
-
-def show_landmarks_batch(sample_batched):
-    """Show image with landmarks for a batch of samples."""
-    images_batch, landmarks_batch = \
-            sample_batched['image'], sample_batched['landmarks']
-    batch_size = len(images_batch)
-    im_size = images_batch.size(2)
-
-    grid = utils.make_grid(images_batch)
-    plt.imshow(grid.numpy().transpose((1, 2, 0)))
-
-    for i in range(batch_size):
-        plt.scatter(landmarks_batch[i, :, 0].numpy() + i * im_size,
-                    landmarks_batch[i, :, 1].numpy(),
-                    s=10, marker='.', c='r')
-
-        plt.title('Batch from dataloader')
-
-for i_batch, sample_batched in enumerate(dataloader):
-    print(i_batch, sample_batched['image'].size(),
-          sample_batched['landmarks'].size())
-
-    # observe 4th batch and stop.
-    if i_batch == 3:
-        plt.figure()
-        show_landmarks_batch(sample_batched)
-        plt.axis('off')
-        plt.ioff()
-        plt.show()
-        break
 '''plt.imshow(cells_dataset[1]['landmarks'])
 plt.show()
 '''
-
 
 
 

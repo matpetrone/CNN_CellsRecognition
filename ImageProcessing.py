@@ -16,18 +16,19 @@ def conv2grayFrR(image):
 
 def conv2grayFrB(image):
     grayImage = image[:,:,2]
-    return grayImage
+    return grayImage.reshape(256,256,1)
 
 def gaussianConv(image, sigma):
     return filters.gaussian(image, sigma, multichannel=False)
 
-def scaleHeatmap(image, newSize):  #WARNING: this method work well only in the new tuple is a divider for old size
+def scaleHeatmap(image, newSize):  #WARNING: this method work well only if the new tuple is a divider for old size
     if isinstance(newSize, tuple):
         blockedImage = view_as_blocks(image, (image.shape[0]//newSize[0], image.shape[1]//newSize[1]))
         scaledImage = np.zeros(newSize)
         for i in range(blockedImage.shape[1]):
             for j in range(blockedImage.shape[0]):
                 scaledImage[i,j] = np.array(np.sum(blockedImage[i,j]))
+                scaledImage = scaledImage
         return scaledImage
     else:
         warnings.warn('WARNING: second input must be a tuple (n, m)')
@@ -44,12 +45,12 @@ def createHeatMap64(image, sigma = 7):
     heatMap = conv2grayFrR(image)
     heatMap1 = gaussianConv(heatMap, sigma)
     heatMap2 = scaleHeatmap(heatMap1, (64,64))
+    heatMap2 = heatMap2.reshape(64,64,1)
     return heatMap2
 
 #TEST
 
 image = io.imread(os.path.abspath('CellsDataset/001dots.png'))
-
 
 
 
