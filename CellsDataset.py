@@ -93,7 +93,9 @@ class ToTensor(object):
         # torch image: C X H X W
         image = image.transpose((2, 0, 1))
         landmarks = landmarks.transpose ((2,0,1))
-        return {'image': torch.from_numpy(image), 'landmarks': torch.from_numpy(landmarks)}
+        newImg = torch.from_numpy(image)
+        newLmks = torch.from_numpy(landmarks)
+        return {'image': newImg.float(), 'landmarks': newLmks.float()}
 
 def convertFileName(string1):
     string = list(string1)

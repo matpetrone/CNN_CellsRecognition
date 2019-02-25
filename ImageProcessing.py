@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 np.set_printoptions(threshold=np.nan)
 import warnings
+import torch
 
 def conv2grayFrR(image):
     grayImage = image[:,:,0]
@@ -48,12 +49,10 @@ def createHeatMap64(image, sigma = 7):
     heatMap2 = heatMap2.reshape(64,64,1)
     return heatMap2
 
+
 #TEST
 
 image = io.imread(os.path.abspath('CellsDataset/001dots.png'))
-
-
-
 
 
 

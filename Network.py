@@ -23,11 +23,11 @@ class BaselineNet(torch.nn.Module):
        self.conv3 = nn.Conv2d(64,1,kernel_size=3, padding=1)
 
    def forward(self, x):
-       in_size = x.shape[0]
+       #in_size = x.shape[0]
        x = F.relu(self.maxPool1(self.conv1(x)))
        x = F.relu(self.maxPool2(self.conv2(x)))
        x = self.conv3(x)
-       x = x.view(in_size,-1)
+       #x = x.view(in_size, -1)
        return x
 
    def num_flat_features(self, x):
@@ -46,6 +46,7 @@ cellsDataset = CellsDataset(csv_file = 'cells_landmarks.csv', root_dir = 'CellsD
 dataloader = DataLoader(cellsDataset, batch_size=4, shuffle=True, num_workers=4)
 criterion = nn.MSELoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
 
 for epoch in range(2):  # loop over the dataset multiple times
 
