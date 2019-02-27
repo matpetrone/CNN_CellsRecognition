@@ -36,7 +36,6 @@ class CellsDataset(Dataset):
 
         if self.transform:
             sample = self.transform(sample)
-
         return sample
 
 
@@ -110,10 +109,6 @@ def convertFileName(string1):
 
 #TEST
 
-
-'''plt.imshow(cells_dataset[1]['landmarks'])
-plt.show()
-'''
 
 
 

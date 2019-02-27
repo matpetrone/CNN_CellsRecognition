@@ -13,11 +13,11 @@ import torch
 
 def conv2grayFrR(image):
     grayImage = image[:,:,0]
-    return grayImage
+    return grayImage /255.0
 
 def conv2grayFrB(image):
     grayImage = image[:,:,2]
-    return grayImage.reshape(256,256,1)
+    return grayImage.reshape(256,256,1) /255.0
 
 def gaussianConv(image, sigma):
     return filters.gaussian(image, sigma, multichannel=False)
@@ -49,10 +49,38 @@ def createHeatMap64(image, sigma = 7):
     heatMap2 = heatMap2.reshape(64,64,1)
     return heatMap2
 
+def visualizeImage(image):
+    plt.imshow(image)
+    plt.show()
+
+def visualizeTorchImage(tensor, str =''):
+    image = tensor.view(tensor.shape[1], tensor.shape[2], tensor.shape[0])
+    image = np.squeeze(tensor.detach().numpy())
+    image = (image - np.min(image)) / (np.max(image) - np.min(image))
+    plt.imshow(image)
+    plt.title(str)
+    plt.show()
+
+def compareTorchImages(tensor1, tensor2):
+    plt.subplot(1,2,1)
+    image1 = tensor1.view(tensor1.shape[1],tensor1.shape[2], tensor1.shape[0])
+    image1 = np.squeeze(image1.detach().numpy())
+    image1 = (image1 - np.min(image1)) / (np.max(image1) - np.min(image1))
+    plt.imshow(image1)
+    plt.title('CNN Output')
+
+    plt.subplot(1,2,2)
+    image2 = tensor2.view(tensor2.shape[1], tensor2.shape[2], tensor2.shape[0])
+    image2 = np.squeeze(image2.detach().numpy())
+    image2 = (image2 - np.min(image2)) / (np.max(image2) - np.min(image2))
+    plt.imshow(image2)
+    plt.title('Landmark')
+
+    plt.show()
+
+
 
 #TEST
-
-image = io.imread(os.path.abspath('CellsDataset/001dots.png'))
 
 
 
