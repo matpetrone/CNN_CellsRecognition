@@ -1,5 +1,3 @@
-from CellsDataset import CellsDataset
-from skimage import io, transform
 import numpy as np
 import torch
 import torch.nn as nn
@@ -27,44 +25,77 @@ class BaselineNet(torch.nn.Module):
        x = self.conv3(x)
        return x
 
-net = BaselineNet().to(device)
+def rmse(predictions, target):                         #RMSE between two lists
+    return np.sqrt(((predictions- target)**2).mean())
+
+def cellsCountDistance(image1, image2):                #Distance between number of cells in two pics
+    prediction = torch.sum(image1)
+    target = torch.sum(image2)
+    prediction = prediction.detach().numpy()
+    target = target.detach().numpy()
+    return rmse(prediction, target)
+
+def meanCellsCount(prediction, target, j):
+    partialMSE = 0.0
+    for i in range(len(prediction)):
+        partialMSE += cellsCountDistance(prediction[i], target[i])
+    partialMSE = partialMSE/len(prediction)
+    print('Mean Squared Error batch n.%d:'%j, partialMSE)
+    return partialMSE
+
+def weights_init(m):
+    if isinstance(m, nn.Conv2d):
+        m.reset_parameters()
+
+def resetNetParameters(net):
+    net.apply(weights_init)
+    print('Net has been initialized')
+
 
 #TRAINING
-cellsDataset = CellsDataset(csv_file = 'cells_landmarks.csv', root_dir = 'CellsDataset/', transform = ToTensor())
-dataloader = DataLoader(cellsDataset, batch_size=6, shuffle=True, num_workers=4)
-criterion = nn.MSELoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-optimizer2 = optim.Adam(net.parameters(), lr = 0.001)
+
+def trainNet(net, dataloader):
+    criterion = nn.MSELoss()
+    optimizerAdam = optim.Adam(net.parameters(), lr=0.001)
+    resetNetParameters(net)
+
+    for epoch in range(5):  # loop over the dataset multiple times
+
+        running_loss = 0.0
+        for i, data in enumerate(dataloader, 0):
+            # get the inputs
+            inputs = data['image']
+            labels = data['landmarks']
+
+            # zero the parameter gradients
+            optimizerAdam.zero_grad()
+
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizerAdam.step()
+
+            # print statistics
+            running_loss += loss.item()
+            if i % 20 == 19:    # print every 20 mini-batches
+                print('[%d, %5d] loss: %.7f' %
+                      (epoch + 1, i + 1, running_loss / 20))
+                running_loss = 0.0
+
+            compareTorchImages(outputs[0], labels[0])   #show picture comparison
 
 
-for epoch in range(10):  # loop over the dataset multiple times
+    print('Finished Training')
 
-    running_loss = 0.0
-    for i, data in enumerate(dataloader, 0):
-        # get the inputs
+
+#TESTING
+def testNet(net, dataloader):
+    for j, data in enumerate(dataloader, 0):
         inputs = data['image']
         labels = data['landmarks']
 
-        # zero the parameter gradients
-        optimizer2.zero_grad()
-
-        # forward + backward + optimize
         outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer2.step()
 
-        # print statistics
-        running_loss += loss.item()
-        if i % 20 == 19:    # print every 20 mini-batches
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 20.0))
-            running_loss = 0.0
-
-        compareTorchImages(outputs[0], labels[0])
-
-print('Finished Training')
-
-
-
-#TEST
+        meanCellsCount(outputs,labels, j+1)
+    print('Finished Testing')

@@ -1,23 +1,17 @@
 from skimage import io, transform, filters
 from skimage.util import view_as_blocks
-from skimage import color
-import os
-import plotly.plotly as py
-import plotly.graph_objs as go
-from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 np.set_printoptions(threshold=np.nan)
 import warnings
-import torch
 
 def conv2grayFrR(image):
     grayImage = image[:,:,0]
-    return grayImage /255.0
+    return grayImage / 255.0
 
 def conv2grayFrB(image):
     grayImage = image[:,:,2]
-    return grayImage.reshape(256,256,1) /255.0
+    return grayImage.reshape(256,256,1) / 255.0
 
 def gaussianConv(image, sigma):
     return filters.gaussian(image, sigma, multichannel=False)
@@ -42,11 +36,11 @@ def sparseImage(image):
                 newImage[i,j] = 1
     return newImage
 
-def createHeatMap64(image, sigma = 7):
+def createHeatMap(image, newSize, sigma = 7):
     heatMap = conv2grayFrR(image)
     heatMap1 = gaussianConv(heatMap, sigma)
-    heatMap2 = scaleHeatmap(heatMap1, (64,64))
-    heatMap2 = heatMap2.reshape(64,64,1)
+    heatMap2 = scaleHeatmap(heatMap1, newSize)
+    heatMap2 = heatMap2.reshape(newSize[0], newSize[1], 1)
     return heatMap2
 
 def visualizeImage(image):
@@ -77,7 +71,6 @@ def compareTorchImages(tensor1, tensor2):
     plt.title('Landmark')
 
     plt.show()
-
 
 
 #TEST
