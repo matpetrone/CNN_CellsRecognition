@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 np.set_printoptions(threshold=np.nan)
 import warnings
-
+from PIL import Image
+import cv2
 def conv2grayFrR(image):
     grayImage = image[:,:,0]
     return grayImage /255.0  #Normalize
@@ -84,7 +85,8 @@ def randomCrop(image, n_crop = 1):
     return cropImages
 
 
-
+def resizeImage(image, newSize=(256,256)):
+    return cv2.resize(image, dsize=newSize, interpolation=cv2.INTER_CUBIC)
 
 
 
