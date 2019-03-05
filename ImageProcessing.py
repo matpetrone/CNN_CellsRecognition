@@ -7,11 +7,11 @@ import warnings
 
 def conv2grayFrR(image):
     grayImage = image[:,:,0]
-    return grayImage / 255.0
+    return grayImage /255.0  #Normalize
 
 def conv2grayFrB(image):
     grayImage = image[:,:,2]
-    return grayImage.reshape(256,256,1) / 255.0
+    return grayImage.reshape(256,256,1) /255.0 #Normalize
 
 def gaussianConv(image, sigma):
     return filters.gaussian(image, sigma, multichannel=False)
@@ -43,10 +43,6 @@ def createHeatMap(image, newSize, sigma = 7):
     heatMap2 = heatMap2.reshape(newSize[0], newSize[1], 1)
     return heatMap2
 
-def visualizeImage(image):
-    plt.imshow(image)
-    plt.show()
-
 def visualizeTorchImage(tensor, str =''):
     image = tensor.view(tensor.shape[1], tensor.shape[2], tensor.shape[0])
     image = np.squeeze(tensor.detach().numpy())
@@ -73,7 +69,23 @@ def compareTorchImages(tensor1, tensor2):
     plt.show()
 
 
-#TEST
+def randomCrop(image, n_crop = 1):
+    h, w = image.shape[:2]
+    cropImages = []
+    output_size = 32
+    for i in range(n_crop):
+        output_size = np.random.randint(output_size, image.shape[0])
+        new_h, new_w = (output_size, output_size)  #TODO: verify that the max value must be 256 or lower
+        anchor = np.random.randint(new_h//2, h-(new_h//2))
+        start_idx = anchor - (new_h//2)
+        end_idx = anchor + (new_h//2)
+        cropImg = image[start_idx:end_idx, start_idx:end_idx]
+        cropImages.append(cropImg)
+    return cropImages
+
+
+
+
 
 
 

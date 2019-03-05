@@ -7,7 +7,7 @@ from skimage import io, transform
 from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, sampler
 from torchvision import transforms, utils
 from ImageProcessing import conv2grayFrB, createHeatMap
 np.set_printoptions(threshold=np.nan)
@@ -15,7 +15,11 @@ np.set_printoptions(threshold=np.nan)
 
 class CellsDataset(Dataset):
 
-    def __init__(self, csv_file, root_dir, transform=None):
+    def __init__(self, root_dir, shuffle=True, transform=None):
+        if shuffle:
+            csv_file = 'cells_landmarks_rand.csv'
+        else:
+            csv_file = 'cells_landmarks.csv'
         self.landmarks_frame = pd.read_csv(csv_file, error_bad_lines=False)
         self.root_dir = root_dir
         self.transform = transform
@@ -62,9 +66,23 @@ def convertFileName(string1):
     newString = "".join(string)
     return newString
 
+class ChunkSampler(sampler.Sampler):
+    """Samples elements sequentially from some offset.
+    Arguments:
+        num_samples: # of desired datapoints
+        start: offset where we should start selecting from
+    """
+    def __init__(self, num_samples, start=0):
+        self.num_samples = num_samples
+        self.start = start
+
+    def __iter__(self):
+        return iter(range(self.start, self.start + self.num_samples))
+
+    def __len__(self):
+        return self.num_samples
 
 
-# 4-CROSS VALIDATION
 
 
 

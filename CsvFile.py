@@ -2,6 +2,7 @@ import csv
 import numpy as np
 from skimage import io
 import os
+import pandas as pd
 
 def editFileName(string):
     new = list(string)
@@ -31,7 +32,14 @@ def create_csv():
                         coordinates = np.append(coordinates, [j, i])
             landmarks_writer.writerow(coordinates)
 
-create_csv()
+#create_csv()
 
 
+def shuffler(filename):
+  df = pd.read_csv(filename, header=0)
+  # return the pandas dataframe
+  return df.reindex(np.random.permutation(df.index))
+
+def create_shuffle_csv(outputfilename):
+  shuffler('cells_landmarks.csv').to_csv(outputfilename, quoting=csv.QUOTE_MINIMAL , index=False, encoding='utf-8', na_rep = ' ')
 

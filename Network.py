@@ -23,7 +23,8 @@ class BaselineNet(torch.nn.Module):
        x = F.relu(self.maxPool1(self.conv1(x)))
        x = F.relu(self.maxPool2(self.conv2(x)))
        x = self.conv3(x)
-       return x
+       s = x.sum(-1)
+       return (x, s)
 
 def rmse(predictions, target):                         #RMSE between two lists
     return np.sqrt(((predictions- target)**2).mean())
@@ -54,48 +55,50 @@ def resetNetParameters(net):
 
 #TRAINING
 
-def trainNet(net, dataloader):
+def trainNet(net, dataloaders):
     criterion = nn.MSELoss()
     optimizerAdam = optim.Adam(net.parameters(), lr=0.001)
     resetNetParameters(net)
 
-    for epoch in range(5):  # loop over the dataset multiple times
-
+    for epoch in range(3):  # loop over the dataset multiple times
         running_loss = 0.0
-        for i, data in enumerate(dataloader, 0):
-            # get the inputs
-            inputs = data['image']
-            labels = data['landmarks']
+        for dataloader in dataloaders:
+            for i, data in enumerate(dataloader, 0):
+                # get the inputs
+                inputs = data['image']
+                labels = data['landmarks']
 
-            # zero the parameter gradients
-            optimizerAdam.zero_grad()
+                # zero the parameter gradients
+                optimizerAdam.zero_grad()
 
-            # forward + backward + optimize
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizerAdam.step()
+                # forward + backward + optimize
+                (outputs, s) = net(inputs)
+                loss = criterion(outputs, labels)
+                loss.backward()
+                optimizerAdam.step()
 
-            # print statistics
-            running_loss += loss.item()
-            if i % 20 == 19:    # print every 20 mini-batches
-                print('[%d, %5d] loss: %.7f' %
-                      (epoch + 1, i + 1, running_loss / 20))
-                running_loss = 0.0
-
-            compareTorchImages(outputs[0], labels[0])   #show picture comparison
-
+                # print statistics
+                running_loss += loss.item()
+                if i % 10 == 9:    # print every 20 mini-batches
+                    print('[%d, %5d] loss: %.7f' %
+                          (epoch + 1, i + 1, running_loss / 10))
+                    running_loss = 0.0
+                    #compareTorchImages(outputs[0], labels[0])   #show picture comparison
 
     print('Finished Training')
 
 
 #TESTING
+
 def testNet(net, dataloader):
+    distanceMSE = 0.0
     for j, data in enumerate(dataloader, 0):
         inputs = data['image']
         labels = data['landmarks']
 
-        outputs = net(inputs)
+        (outputs, _) = net(inputs)
 
-        meanCellsCount(outputs,labels, j+1)
+        distanceMSE += meanCellsCount(outputs,labels, j+1)
     print('Finished Testing')
+    distanceMSE /= len(dataloader)
+    return distanceMSE
