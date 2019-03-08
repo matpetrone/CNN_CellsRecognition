@@ -5,8 +5,9 @@ import torch.nn.functional as F
 from torchvision import transforms, utils
 from CellsDataset import CellsDataset, ToTensor
 from torch.utils.data import DataLoader
-from ImageProcessing import visualizeTorchImage, compareTorchImages
+from ImageProcessing import visualizeTorchImage, compareTorchImages, randomCrop, convertTorchToNp, convertNptoTorch
 import torch.optim as optim
+from tensorboardX import SummaryWriter
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class BaselineNet(torch.nn.Module):
@@ -23,7 +24,7 @@ class BaselineNet(torch.nn.Module):
        x = F.relu(self.maxPool1(self.conv1(x)))
        x = F.relu(self.maxPool2(self.conv2(x)))
        x = self.conv3(x)
-       s = x.sum(-1)
+       s = x.sum((1,2,3))
        return (x, s)
 
 def rmse(predictions, target):                         #RMSE between two lists
@@ -52,37 +53,74 @@ def resetNetParameters(net):
     net.apply(weights_init)
     print('Net has been initialized')
 
+def subImages(images, n_crop = 2):
+    if torch.is_tensor(images[0]):
+        images = convertTorchToNp(images)
+    rankedImages = []
+    for i in range(len(images)):
+        subsetImgs = randomCrop(images[i], n_crop)
+        for j in range(n_crop):
+            rankedImages.append(subsetImgs[j])
+    return np.array(rankedImages)
+
+def rankingImages(sum_batch, n_crop, n_origImg):
+    partialLoss = torch.autograd.Variable(torch.tensor([0.0]))
+    m = 10
+    for i in range(n_origImg):
+        for j in range(n_crop):
+            partialLoss += torch.clamp(sum_batch[n_origImg + j + (i*n_crop)] - sum_batch[i] + m, min=0)
+            #partialLoss += np.maximum(sum_batch[n_origImg + j + (i*n_crop)].detach().numpy() - sum_batch[i].detach().numpy() + m, 0)
+    return partialLoss
+
 
 #TRAINING
 
 def trainNet(net, dataloaders):
     criterion = nn.MSELoss()
-    optimizerAdam = optim.Adam(net.parameters(), lr=0.001)
+    optimizerAdam = optim.Adam(net.parameters(), lr=0.0001)
     resetNetParameters(net)
-
-    for epoch in range(3):  # loop over the dataset multiple times
+    writer = SummaryWriter()
+    for epoch in range(10):  #loop over the dataset multiple times
         running_loss = 0.0
+        rn_loss_MSE = 0.0
+        rn_loss_R = 0.0
         for dataloader in dataloaders:
             for i, data in enumerate(dataloader, 0):
                 # get the inputs
                 inputs = data['image']
                 labels = data['landmarks']
 
+                #Ranking Loss
+                n_crops = 2
+                crops = subImages(inputs, n_crops) #create an array that contains in each pos. subimages randomly cropped
+                crops = convertNptoTorch(crops, resize = True)
+                inputs = torch.cat((inputs,crops),0)
+
                 # zero the parameter gradients
                 optimizerAdam.zero_grad()
 
                 # forward + backward + optimize
                 (outputs, s) = net(inputs)
-                loss = criterion(outputs, labels)
+                loss_MSE = criterion(outputs[0:labels.shape[0]], labels)
+                loss_R = rankingImages(s, n_crops, labels.shape[0])
+                loss = loss_MSE + loss_R
                 loss.backward()
                 optimizerAdam.step()
 
                 # print statistics
+                rn_loss_MSE += loss_MSE.item()
+                rn_loss_R += loss_R
                 running_loss += loss.item()
+
+                '''writer.add_scalar('loss', loss.item(), i)
+                writer.close()'''
+
                 if i % 10 == 9:    # print every 20 mini-batches
-                    print('[%d, %5d] loss: %.7f' %
-                          (epoch + 1, i + 1, running_loss / 10))
+                    print('[%d, %5d] loss: %.7f, loss_MSE: %.7f, loss_R: %.7f' %
+                          (epoch + 1, i + 1, running_loss / 10, rn_loss_MSE / 10, rn_loss_R / 10))
                     running_loss = 0.0
+                    rn_loss_MSE = 0.0
+                    rn_loss_R = 0.0
                     #compareTorchImages(outputs[0], labels[0])   #show picture comparison
 
     print('Finished Training')

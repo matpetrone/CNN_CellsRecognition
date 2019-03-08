@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 np.set_printoptions(threshold=np.nan)
 import warnings
+import torch
 from PIL import Image
 import cv2
 def conv2grayFrR(image):
@@ -45,12 +46,42 @@ def createHeatMap(image, newSize, sigma = 7):
     return heatMap2
 
 def visualizeTorchImage(tensor, str =''):
-    image = tensor.view(tensor.shape[1], tensor.shape[2], tensor.shape[0])
-    image = np.squeeze(tensor.detach().numpy())
-    image = (image - np.min(image)) / (np.max(image) - np.min(image))
+    image = tensor.numpy()
+    image = image.transpose((1,2,0))
+    image = image.reshape((image.shape[0], image.shape[1]))
     plt.imshow(image)
     plt.title(str)
     plt.show()
+
+def convertTorchToNp(tensor):
+    images = []
+    if len(tensor) > 0:  #if it's a batch
+        for i in range(tensor.shape[0]):
+            image = tensor[i].numpy()
+            image = image.transpose((1, 2, 0))
+            image = image.reshape((image.shape[0], image.shape[1]))
+            images.append(image)
+    else:
+        image = tensor.numpy()
+        image = image.transpose((1, 2, 0))
+        image = image.reshape((image.shape[0], image.shape[1]))
+        images.append(image)
+    return np.array(images)
+
+def convertNptoTorch(images, resize = False):
+    imgs = []
+    for i in range(len(images)):
+        img = images[i]
+        if resize:
+            img = resizeImage(img)
+        img = img.reshape(img.shape[0], img.shape[1], 1)
+        img = img.transpose((2, 0, 1))
+        img = torch.from_numpy(img)
+        #img =torch.stack(img)
+        img = img.unsqueeze(0)
+        imgs.append(img)
+    images = torch.cat((imgs),0)
+    return images
 
 def compareTorchImages(tensor1, tensor2):
     plt.subplot(1,2,1)
@@ -69,14 +100,19 @@ def compareTorchImages(tensor1, tensor2):
 
     plt.show()
 
+def visualizeNpImage(img):
+    plt.imshow(img)
+    plt.show()
 
 def randomCrop(image, n_crop = 1):
+    if torch.is_tensor(image):
+        image = convertTorchToNp(image)
     h, w = image.shape[:2]
     cropImages = []
     output_size = 32
     for i in range(n_crop):
         output_size = np.random.randint(output_size, image.shape[0])
-        new_h, new_w = (output_size, output_size)  #TODO: verify that the max value must be 256 or lower
+        new_h, new_w = (output_size, output_size)
         anchor = np.random.randint(new_h//2, h-(new_h//2))
         start_idx = anchor - (new_h//2)
         end_idx = anchor + (new_h//2)
