@@ -65,11 +65,10 @@ def subImages(images, n_crop = 2):
 
 def rankingImages(sum_batch, n_crop, n_origImg):
     partialLoss = torch.autograd.Variable(torch.tensor([0.0]))
-    m = 10
+    m = 1
     for i in range(n_origImg):
         for j in range(n_crop):
             partialLoss += torch.clamp(sum_batch[n_origImg + j + (i*n_crop)] - sum_batch[i] + m, min=0)
-            #partialLoss += np.maximum(sum_batch[n_origImg + j + (i*n_crop)].detach().numpy() - sum_batch[i].detach().numpy() + m, 0)
     return partialLoss
 
 
@@ -79,8 +78,7 @@ def trainNet(net, dataloaders):
     criterion = nn.MSELoss()
     optimizerAdam = optim.Adam(net.parameters(), lr=0.0001)
     resetNetParameters(net)
-    writer = SummaryWriter()
-    for epoch in range(10):  #loop over the dataset multiple times
+    for epoch in range(3):  #loop over the dataset multiple times
         running_loss = 0.0
         rn_loss_MSE = 0.0
         rn_loss_R = 0.0
@@ -112,16 +110,13 @@ def trainNet(net, dataloaders):
                 rn_loss_R += loss_R
                 running_loss += loss.item()
 
-                '''writer.add_scalar('loss', loss.item(), i)
-                writer.close()'''
-
                 if i % 10 == 9:    # print every 20 mini-batches
                     print('[%d, %5d] loss: %.7f, loss_MSE: %.7f, loss_R: %.7f' %
                           (epoch + 1, i + 1, running_loss / 10, rn_loss_MSE / 10, rn_loss_R / 10))
                     running_loss = 0.0
                     rn_loss_MSE = 0.0
                     rn_loss_R = 0.0
-                    #compareTorchImages(outputs[0], labels[0])   #show picture comparison
+                    compareTorchImages(outputs[0], labels[0])   #show picture comparison
 
     print('Finished Training')
 
