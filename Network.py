@@ -65,7 +65,7 @@ def subImages(images, n_crop = 2):
 
 def rankingImages(sum_batch, n_crop, n_origImg):
     partialLoss = torch.autograd.Variable(torch.tensor([0.0]))
-    m = 1
+    m = 3
     for i in range(n_origImg):
         for j in range(n_crop):
             partialLoss += torch.clamp(sum_batch[n_origImg + j + (i*n_crop)] - sum_batch[i] + m, min=0)
@@ -78,7 +78,7 @@ def trainNet(net, dataloaders):
     criterion = nn.MSELoss()
     optimizerAdam = optim.Adam(net.parameters(), lr=0.0001)
     resetNetParameters(net)
-    for epoch in range(3):  #loop over the dataset multiple times
+    for epoch in range(40):  #loop over the dataset multiple times
         running_loss = 0.0
         rn_loss_MSE = 0.0
         rn_loss_R = 0.0
