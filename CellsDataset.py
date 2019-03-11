@@ -77,6 +77,7 @@ class ChunkSampler(sampler.Sampler):
         self.start = start
 
     def __iter__(self):
+        #return iter(range(self.start, self.start + self.num_samples))
         return iter(np.random.permutation(range(self.start, self.start + self.num_samples)))
 
     def __len__(self):
