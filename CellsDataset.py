@@ -66,6 +66,22 @@ def convertFileName(string1):
     newString = "".join(string)
     return newString
 
+class IndexSampler(sampler.Sampler):
+    """Samples elements sequentially from some offset.
+    Arguments:
+        num_samples: # of desired datapoints
+        start: offset where we should start selecting from
+    """
+    def __init__(self, indexes):
+        self._indexes = indexes
+
+    def __iter__(self):
+        return iter(np.random.permutation(self._indexes))
+
+    def __len__(self):
+        return len(self._indexes)
+    
+
 class ChunkSampler(sampler.Sampler):
     """Samples elements sequentially from some offset.
     Arguments:

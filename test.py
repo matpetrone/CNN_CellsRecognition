@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from Network import BaselineNet, cellsCountDistance, trainNet, testNet
 from ImageProcessing import compareTorchImages
-from CellsDataset import CellsDataset, ToTensor, ChunkSampler
+from CellsDataset import CellsDataset, ToTensor, IndexSampler
 from torchvision import transforms, utils
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
@@ -12,12 +12,13 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 net = BaselineNet().to(device)
 
 cellsDataset = CellsDataset(shuffle=True, root_dir = 'CellsDataset/', transform = ToTensor())
-batch_size = 50
-dataLoader_1 = DataLoader(cellsDataset, batch_size=10, shuffle=False, num_workers=4, sampler=ChunkSampler(batch_size, 0))
-dataLoader_2 = DataLoader(cellsDataset, batch_size=10, shuffle=False, num_workers=4, sampler=ChunkSampler(batch_size, len(cellsDataset)//4))
-dataLoader_3 = DataLoader(cellsDataset, batch_size=10, shuffle=False, num_workers=4, sampler=ChunkSampler(batch_size, len(cellsDataset)//2))
-dataLoader_4 = DataLoader(cellsDataset, batch_size=10, shuffle=False, num_workers=4, sampler=ChunkSampler(batch_size, (len(cellsDataset)//2)+(len(cellsDataset)//4)))
-dataloaders = [dataLoader_1, dataLoader_2, dataLoader_3, dataLoader_4]
+num_samples = 200
+split_size = 50
+batch_size = 5
+test_idxs = [range(s, s+split_size) for s in range(0, num_samples, split_size)]
+train_idxs = [list(set(range(1, num_samples)) - set(idxs)) for idxs in test_idxs]
+test_loaders = [DataLoader(cellsDataset, batch_size=batch_size, sampler=IndexSampler(idxs)) for idxs in test_idxs]
+train_loaders = [DataLoader(cellsDataset, batch_size=batch_size, sampler=IndexSampler(idxs)) for idxs in train_idxs]
 
 # 4-FOLD CROSS VALIDATION
 '''partialPerformance = 0.0
@@ -37,10 +38,9 @@ print('Final Performance:', totalPerformance)'''
 partialPerformance = 0.0
 for i in range(1):
     print('\nCrossing n.%d'%(i+1))
-    dataloaders_train = dataloaders[1:]
-    if i > 0:
-        dataloaders_train = dataloaders[0:i] + dataloaders[(i+1):]
-    trainNet(net, dataloaders_train, plot=False, device=device)
-    partialPerformance += testNet(net, dataloaders[i], device)
+    trainNet(net, train_loaders[i], test_loaders[i], plot=False, device=device)
+    split_performance = testNet(net, test_loaders[i], device)
+    partialPerformance += split_performance
+    print(f'MSE for split {i}: {split_performance}')
 
 

@@ -15,7 +15,7 @@ class BaselineNet(torch.nn.Module):
        super(BaselineNet, self).__init__()
        self.conv1 = nn.Conv2d(1, 64, kernel_size=3, padding=1)
        self.maxPool1 = nn.MaxPool2d(2,stride=2)
-       self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+       self.conv2 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
        self.maxPool2 = nn.MaxPool2d(2, stride=2)
        self.conv3 = nn.Conv2d(64, 1, kernel_size=3, padding=1)
 
@@ -72,51 +72,50 @@ def rankingImages(sum_batch, n_crop, n_origImg, device='cpu'):
 
 
 # TRAINING
-def trainNet(net, dataloaders, plot=False, device='cpu'):
+def trainNet(net, dataloader, test_loader, plot=False, device='cpu'):
     criterion = nn.MSELoss()
-    optimizerAdam = optim.Adam(net.parameters(), lr=0.0001)
+    optimizerAdam = optim.Adam(net.parameters(), weight_decay=1e-5, lr=0.00001)
     resetNetParameters(net)
-    for epoch in range(20):  #loop over the dataset multiple times
+    for epoch in range(80):  #loop over the dataset multiple times
         running_loss = 0.0
         rn_loss_MSE = 0.0
         rn_loss_R = 0.0
-        for dataloader in dataloaders:
-            for i, data in enumerate(dataloader, 0):
-                # get the inputs
-                inputs = data['image']
-                labels = data['landmarks'].to(device)
+        for i, data in enumerate(dataloader, 0):
+            # get the inputs
+            inputs = data['image']
+            labels = data['landmarks'].to(device)
 
-                #Ranking Loss
-                n_crops = 4
-                crops = subImages(inputs, n_crops) #create an array that contains in each pos. subimages randomly cropped
-                crops = convertNptoTorch(crops, resize = True)
-                inputs = torch.cat((inputs,crops),0)
+            #Ranking Loss
+            n_crops = 2
+            crops = subImages(inputs, n_crops) #create an array that contains in each pos. subimages randomly cropped
+            crops = convertNptoTorch(crops, resize = True)
+            inputs = torch.cat((inputs,crops),0)
 
-                # zero the parameter gradients
-                optimizerAdam.zero_grad()
+            # zero the parameter gradients
+            optimizerAdam.zero_grad()
 
-                # forward + backward + optimize
-                (outputs, s) = net(inputs.to(device))
-                loss_MSE = criterion(outputs[0:labels.shape[0]], labels)
-                loss_R = rankingImages(s, n_crops, labels.shape[0], device)
-                loss = loss_MSE + loss_R
-                loss.backward()
-                optimizerAdam.step()
+            # forward + backward + optimize
+            (outputs, s) = net(inputs.to(device))
+            loss_MSE = criterion(outputs[0:labels.shape[0]], labels)
+            loss_R = rankingImages(s, n_crops, labels.shape[0], device)
+            loss = loss_MSE + 0.0 * loss_R
+            loss.backward()
+            optimizerAdam.step()
 
-                # print statistics
-                rn_loss_MSE += loss_MSE.item()
-                rn_loss_R += loss_R
-                running_loss += loss.item()
+            # print statistics
+            rn_loss_MSE += loss_MSE.item()
+            rn_loss_R += loss_R
+            running_loss += loss.item()
 
-                if i % 10 == 9:    # print every 20 mini-batches
-                    print('[%d, %5d] loss: %.7f, loss_MSE: %.7f, loss_R: %.7f' %
-                          (epoch + 1, i + 1, running_loss / 10, rn_loss_MSE / 10, rn_loss_R / 10))
-                    running_loss = 0.0
-                    rn_loss_MSE = 0.0
-                    rn_loss_R = 0.0
-                    if plot:
-                        compareTorchImages(outputs[0], labels[0])   #show picture comparison
-
+            if i % 10 == 9:    # print every 20 mini-batches
+                print('[%d, %5d] loss: %.7f, loss_MSE: %.7f, loss_R: %.7f' %
+                      (epoch + 1, i + 1, running_loss / 10, rn_loss_MSE / 10, rn_loss_R / 10))
+                running_loss = 0.0
+                rn_loss_MSE = 0.0
+                rn_loss_R = 0.0
+                if plot:
+                    compareTorchImages(outputs[0], labels[0])   #show picture comparison
+        print('MSE on test: {}'.format(testNet(net, test_loader, device)))
     print('Finished Training')
 
 
@@ -130,6 +129,5 @@ def testNet(net, dataloader, device='cpu'):
         (outputs, _) = net(inputs)
         distanceMSE += meanCellsCount(outputs.cpu(), labels, j+1)
 
-    print('Finished Testing')
     distanceMSE /= len(dataloader)
     return distanceMSE
