@@ -86,14 +86,14 @@ def convertNptoTorch(images, resize = False):
 def compareTorchImages(tensor1, tensor2):
     plt.subplot(1,2,1)
     image1 = tensor1.view(tensor1.shape[1],tensor1.shape[2], tensor1.shape[0])
-    image1 = np.squeeze(image1.detach().numpy())
+    image1 = np.squeeze(image1.cpu().detach().numpy())
     image1 = (image1 - np.min(image1)) / (np.max(image1) - np.min(image1))
     plt.imshow(image1)
     plt.title('CNN Output')
 
     plt.subplot(1,2,2)
     image2 = tensor2.view(tensor2.shape[1], tensor2.shape[2], tensor2.shape[0])
-    image2 = np.squeeze(image2.detach().numpy())
+    image2 = np.squeeze(image2.cpu().detach().numpy())
     image2 = (image2 - np.min(image2)) / (np.max(image2) - np.min(image2))
     plt.imshow(image2)
     plt.title('Landmark')

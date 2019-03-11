@@ -11,14 +11,13 @@ from tensorboardX import SummaryWriter
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class BaselineNet(torch.nn.Module):
-
    def __init__(self):
        super(BaselineNet, self).__init__()
-       self.conv1 = nn.Conv2d(1,32,kernel_size=3, padding=1)
+       self.conv1 = nn.Conv2d(1, 64, kernel_size=3, padding=1)
        self.maxPool1 = nn.MaxPool2d(2,stride=2)
-       self.conv2 = nn.Conv2d(32,64,kernel_size=3, padding=1)
+       self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
        self.maxPool2 = nn.MaxPool2d(2, stride=2)
-       self.conv3 = nn.Conv2d(64,1,kernel_size=3, padding=1)
+       self.conv3 = nn.Conv2d(64, 1, kernel_size=3, padding=1)
 
    def forward(self, x):
        x = F.relu(self.maxPool1(self.conv1(x)))
@@ -63,8 +62,8 @@ def subImages(images, n_crop = 2):
             rankedImages.append(subsetImgs[j])
     return np.array(rankedImages)
 
-def rankingImages(sum_batch, n_crop, n_origImg):
-    partialLoss = torch.autograd.Variable(torch.tensor([0.0]))
+def rankingImages(sum_batch, n_crop, n_origImg, device='cpu'):
+    partialLoss = torch.autograd.Variable(torch.tensor([0.0])).to(device)
     m = 3
     for i in range(n_origImg):
         for j in range(n_crop):
@@ -72,13 +71,12 @@ def rankingImages(sum_batch, n_crop, n_origImg):
     return partialLoss
 
 
-#TRAINING
-
-def trainNet(net, dataloaders):
+# TRAINING
+def trainNet(net, dataloaders, plot=False, device='cpu'):
     criterion = nn.MSELoss()
     optimizerAdam = optim.Adam(net.parameters(), lr=0.0001)
     resetNetParameters(net)
-    for epoch in range(40):  #loop over the dataset multiple times
+    for epoch in range(20):  #loop over the dataset multiple times
         running_loss = 0.0
         rn_loss_MSE = 0.0
         rn_loss_R = 0.0
@@ -86,10 +84,10 @@ def trainNet(net, dataloaders):
             for i, data in enumerate(dataloader, 0):
                 # get the inputs
                 inputs = data['image']
-                labels = data['landmarks']
+                labels = data['landmarks'].to(device)
 
                 #Ranking Loss
-                n_crops = 2
+                n_crops = 4
                 crops = subImages(inputs, n_crops) #create an array that contains in each pos. subimages randomly cropped
                 crops = convertNptoTorch(crops, resize = True)
                 inputs = torch.cat((inputs,crops),0)
@@ -98,9 +96,9 @@ def trainNet(net, dataloaders):
                 optimizerAdam.zero_grad()
 
                 # forward + backward + optimize
-                (outputs, s) = net(inputs)
+                (outputs, s) = net(inputs.to(device))
                 loss_MSE = criterion(outputs[0:labels.shape[0]], labels)
-                loss_R = rankingImages(s, n_crops, labels.shape[0])
+                loss_R = rankingImages(s, n_crops, labels.shape[0], device)
                 loss = loss_MSE + loss_R
                 loss.backward()
                 optimizerAdam.step()
@@ -116,22 +114,22 @@ def trainNet(net, dataloaders):
                     running_loss = 0.0
                     rn_loss_MSE = 0.0
                     rn_loss_R = 0.0
-                    compareTorchImages(outputs[0], labels[0])   #show picture comparison
+                    if plot:
+                        compareTorchImages(outputs[0], labels[0])   #show picture comparison
 
     print('Finished Training')
 
 
 #TESTING
 
-def testNet(net, dataloader):
-    distanceMSE = 0.0
+def testNet(net, dataloader, device='cpu'):
+    distanceMSE = torch.Tensor([0.0]).to(device)
     for j, data in enumerate(dataloader, 0):
-        inputs = data['image']
+        inputs = data['image'].to(device)
         labels = data['landmarks']
-
         (outputs, _) = net(inputs)
+        distanceMSE += meanCellsCount(outputs.cpu(), labels, j+1)
 
-        distanceMSE += meanCellsCount(outputs,labels, j+1)
     print('Finished Testing')
     distanceMSE /= len(dataloader)
     return distanceMSE
