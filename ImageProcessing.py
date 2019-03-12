@@ -2,7 +2,6 @@ from skimage import io, transform, filters
 from skimage.util import view_as_blocks
 import matplotlib.pyplot as plt
 import numpy as np
-np.set_printoptions(threshold=np.nan)
 import warnings
 import torch
 from PIL import Image
