@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader, sampler
 from torchvision import transforms, utils
 from ImageProcessing import conv2grayFrB, createHeatMap
-np.set_printoptions(threshold=np.nan)
 
 
 class CellsDataset(Dataset):
