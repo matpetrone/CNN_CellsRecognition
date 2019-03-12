@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader, sampler
 from torchvision import transforms, utils
-from ImageProcessing import conv2grayFrB, createHeatMap
+from ImageProcessing import conv2grayFrB, createHeatMap,visualizeNpImage
 np.set_printoptions(threshold=np.nan)
 
 
@@ -66,6 +66,22 @@ def convertFileName(string1):
     newString = "".join(string)
     return newString
 
+class IndexSampler(sampler.Sampler):
+    """Samples elements sequentially from some offset.
+    Arguments:
+        num_samples: # of desired datapoints
+        start: offset where we should start selecting from
+    """
+    def __init__(self, indexes):
+        self._indexes = indexes
+
+    def __iter__(self):
+        return iter(np.random.permutation(self._indexes))
+
+    def __len__(self):
+        return len(self._indexes)
+    
+
 class ChunkSampler(sampler.Sampler):
     """Samples elements sequentially from some offset.
     Arguments:
@@ -77,23 +93,7 @@ class ChunkSampler(sampler.Sampler):
         self.start = start
 
     def __iter__(self):
-        #return iter(range(self.start, self.start + self.num_samples))
         return iter(np.random.permutation(range(self.start, self.start + self.num_samples)))
 
     def __len__(self):
         return self.num_samples
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,4 +1,5 @@
 from skimage import io, transform, filters
+from scipy.ndimage import gaussian_filter
 from skimage.util import view_as_blocks
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,6 +8,7 @@ import warnings
 import torch
 from PIL import Image
 import cv2
+
 def conv2grayFrR(image):
     grayImage = image[:,:,0]
     return grayImage /255.0  #Normalize
@@ -16,7 +18,7 @@ def conv2grayFrB(image):
     return grayImage.reshape(256,256,1) /255.0 #Normalize
 
 def gaussianConv(image, sigma):
-    return filters.gaussian(image, sigma, multichannel=False)
+    return gaussian_filter(image, sigma)
 
 def scaleHeatmap(image, newSize):  #WARNING: this method work well only if the new tuple is a divider for old size
     if isinstance(newSize, tuple):
@@ -41,6 +43,7 @@ def sparseImage(image):
 def createHeatMap(image, newSize, sigma = 7):
     heatMap = conv2grayFrR(image)
     heatMap1 = gaussianConv(heatMap, sigma)
+    #visualizeNpImage(heatMap1)
     heatMap2 = scaleHeatmap(heatMap1, newSize)
     heatMap2 = heatMap2.reshape(newSize[0], newSize[1], 1)
     return heatMap2
@@ -77,7 +80,6 @@ def convertNptoTorch(images, resize = False):
         img = img.reshape(img.shape[0], img.shape[1], 1)
         img = img.transpose((2, 0, 1))
         img = torch.from_numpy(img)
-        #img =torch.stack(img)
         img = img.unsqueeze(0)
         imgs.append(img)
     images = torch.cat((imgs),0)
@@ -86,14 +88,14 @@ def convertNptoTorch(images, resize = False):
 def compareTorchImages(tensor1, tensor2):
     plt.subplot(1,2,1)
     image1 = tensor1.view(tensor1.shape[1],tensor1.shape[2], tensor1.shape[0])
-    image1 = np.squeeze(image1.detach().numpy())
+    image1 = np.squeeze(image1.cpu().detach().numpy())
     image1 = (image1 - np.min(image1)) / (np.max(image1) - np.min(image1))
     plt.imshow(image1)
     plt.title('CNN Output')
 
     plt.subplot(1,2,2)
     image2 = tensor2.view(tensor2.shape[1], tensor2.shape[2], tensor2.shape[0])
-    image2 = np.squeeze(image2.detach().numpy())
+    image2 = np.squeeze(image2.cpu().detach().numpy())
     image2 = (image2 - np.min(image2)) / (np.max(image2) - np.min(image2))
     plt.imshow(image2)
     plt.title('Landmark')
@@ -109,7 +111,7 @@ def randomCrop(image, n_crop = 1):
         image = convertTorchToNp(image)
     h, w = image.shape[:2]
     cropImages = []
-    output_size = 32
+    output_size = 128
     for i in range(n_crop):
         output_size = np.random.randint(output_size, image.shape[0])
         new_h, new_w = (output_size, output_size)
