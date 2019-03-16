@@ -6,7 +6,7 @@ import numpy as np
 np.set_printoptions(threshold=np.nan)
 import warnings
 import torch
-from PIL import Image
+import random
 import cv2
 
 def conv2grayFrR(image):
@@ -43,13 +43,12 @@ def sparseImage(image):
 def createHeatMap(image, newSize, sigma = 7):
     heatMap = conv2grayFrR(image)
     heatMap1 = gaussianConv(heatMap, sigma)
-    #visualizeNpImage(heatMap1)
     heatMap2 = scaleHeatmap(heatMap1, newSize)
     heatMap2 = heatMap2.reshape(newSize[0], newSize[1], 1)
     return heatMap2
 
 def visualizeTorchImage(tensor, str =''):
-    image = tensor.numpy()
+    image = tensor.detach().numpy()
     image = image.transpose((1,2,0))
     image = image.reshape((image.shape[0], image.shape[1]))
     plt.imshow(image)
@@ -58,20 +57,20 @@ def visualizeTorchImage(tensor, str =''):
 
 def convertTorchToNp(tensor):
     images = []
-    if len(tensor) > 0:  #if it's a batch
+    if len(tensor.shape) > 3:  #if it's a batch
         for i in range(tensor.shape[0]):
             image = tensor[i].numpy()
-            image = image.transpose((1, 2, 0))
+            image = image.transpose((1,2,0))
             image = image.reshape((image.shape[0], image.shape[1]))
             images.append(image)
     else:
         image = tensor.numpy()
-        image = image.transpose((1, 2, 0))
+        image = image.transpose((1,2,0))
         image = image.reshape((image.shape[0], image.shape[1]))
-        images.append(image)
+        return image
     return np.array(images)
 
-def convertNptoTorch(images, resize = False):
+def convertNptoTorch_arr(images, resize = False):
     imgs = []
     for i in range(len(images)):
         img = images[i]
@@ -84,6 +83,15 @@ def convertNptoTorch(images, resize = False):
         imgs.append(img)
     images = torch.cat((imgs),0)
     return images
+
+def convertNptoTorch(image):
+    if image is None:
+        return None
+    image = image.reshape(image.shape[0], image.shape[1], 1)
+    image = image.transpose((2, 0, 1))
+    image = torch.from_numpy(image)
+    #image = image.unsqueeze(0)
+    return image
 
 def compareTorchImages(tensor1, tensor2):
     plt.subplot(1,2,1)
@@ -108,12 +116,12 @@ def visualizeNpImage(img):
 
 def randomCrop(image, n_crop = 1):
     if torch.is_tensor(image):
-        image = convertTorchToNp(image)
+        image = convertTorchToNp(image) #WARNING: return a shaped np H x W, NOT H x W x 1
     h, w = image.shape[:2]
     cropImages = []
-    output_size = 128
+    output_size = 100
     for i in range(n_crop):
-        output_size = np.random.randint(output_size, image.shape[0])
+        output_size = np.min(np.random.randint(output_size,image.shape[0], size=5))
         new_h, new_w = (output_size, output_size)
         anchor = np.random.randint(new_h//2, h-(new_h//2))
         start_idx = anchor - (new_h//2)
@@ -126,10 +134,36 @@ def randomCrop(image, n_crop = 1):
 def resizeImage(image, newSize=(256,256)):
     return cv2.resize(image, dsize=newSize, interpolation=cv2.INTER_CUBIC)
 
+def randomFlip(image, label=None, p=0.5):
+    lab = False
+    if torch.is_tensor(image):
+        image = convertTorchToNp(image)    #WARNING: return a shaped np H x W,  NOT  H x W x 1
+        if torch.is_tensor(label):
+            label = convertTorchToNp(label)
+            lab = True
+    vert_or_hor = random.random()
+    if random.random() < p:
+        if vert_or_hor < 0.5:
+            if lab:
+                label = np.flipud(label).copy()
+            image = np.flipud(image).copy()
+            return (convertNptoTorch(image), convertNptoTorch(label))
+        else:
+            if lab:
+                label = np.fliplr(label).copy()
+            image = np.fliplr(image).copy()
+            return (convertNptoTorch(image), convertNptoTorch(label))
+    return (convertNptoTorch(image), convertNptoTorch(label))
 
+def flipUD(image):
+    if torch.is_tensor(image):
+        image = convertTorchToNp(image) #WARNING: return a shaped np H x W,  NOT  H x W x 1
+    return convertNptoTorch(np.flipud(image).copy())
 
-
-
+def flipLR(image):
+    if torch.is_tensor(image):
+        image = convertTorchToNp(image) #WARNING: return a shaped np H x W,  NOT  H x W x 1
+    return convertNptoTorch(np.fliplr(image).copy())
 
 
 
