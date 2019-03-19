@@ -78,7 +78,7 @@ def trainNet(net, dataloader, test_loader=None, plot=False, device='cpu'):
     optimizerAdam = optim.Adam(net.parameters(), weight_decay=1e-5, lr=0.0001)
     optimizerAdamW = AdamW(net.parameters(),lr=0.0001)
     resetNetParameters(net)
-    for epoch in range(100):  #loop over the dataset multiple times
+    for epoch in range(300):  #loop over the dataset multiple times
         running_loss = 0.0
         rn_loss_MSE = 0.0
         rn_loss_R = 0.0
@@ -88,8 +88,8 @@ def trainNet(net, dataloader, test_loader=None, plot=False, device='cpu'):
             labels = data['landmarks']
 
             #Ranking Loss
-            n_crops = 10
-            ranking_weight= 0.001
+            n_crops = 3
+            ranking_weight= 0.0001
             crops = subImages(inputs, n_crops) #create an array that contains in each pos. subimages randomly cropped
             crops = convertNptoTorch_arr(crops, resize = True)
             inputs = torch.cat((inputs,crops),0)

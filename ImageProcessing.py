@@ -119,9 +119,9 @@ def randomCrop(image, n_crop = 1):
         image = convertTorchToNp(image) #WARNING: return a shaped np H x W, NOT H x W x 1
     h, w = image.shape[:2]
     cropImages = []
-    output_size = 100
+    output_size = 64
     for i in range(n_crop):
-        output_size = np.min(np.random.randint(output_size,image.shape[0], size=5))
+        output_size = np.min(np.random.randint(output_size,image.shape[0], size=6))
         new_h, new_w = (output_size, output_size)
         anchor = np.random.randint(new_h//2, h-(new_h//2))
         start_idx = anchor - (new_h//2)
