@@ -7,8 +7,9 @@ from CellsDataset import CellsDataset, ToTensor
 from torch.utils.data import DataLoader
 from ImageProcessing import visualizeTorchImage, compareTorchImages, randomCrop, convertTorchToNp, convertNptoTorch_arr, randomFlip
 import torch.optim as optim
+from adamw import AdamW
 from tensorboardX import SummaryWriter
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 #NETWORKS
@@ -30,22 +31,24 @@ class BaselineNet(torch.nn.Module):
        return (x, s)
 
 
-class BaselineNet_bn(torch.nn.Module):
+class BaselineNet_drop(torch.nn.Module):
    def __init__(self):
-       super(BaselineNet_bn, self).__init__()
+       super(BaselineNet_drop, self).__init__()
        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
-       self.conv1_bn = nn.BatchNorm2d(32, affine=False)
+       self.conv2 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
+       self.conv_drop1 = nn.Dropout2d()
        self.maxPool1 = nn.MaxPool2d(2,stride=2)
-       self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-       self.conv2_bn = nn.BatchNorm2d(64, affine=False)
+       self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+       self.conv4 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+       self.conv_drop2 = nn.Dropout2d()
        self.maxPool2 = nn.MaxPool2d(2, stride=2)
-       self.conv3 = nn.Conv2d(64, 1, kernel_size=3, padding=1)
-       self.conv3_bn = nn.BatchNorm2d(1, affine=False)
+       self.conv5 = nn.Conv2d(64, 1, kernel_size=3, padding=1)
+       self.conv3_drop = nn.Dropout2d()
 
    def forward(self, x):
-       x = F.relu(self.maxPool1(self.conv1_bn(self.conv1(x))))
-       x = F.relu(self.maxPool2(self.conv2_bn(self.conv2(x))))
-       x = self.conv3_bn(self.conv3(x))
+       x = F.relu(self.maxPool1(self.conv2(self.conv_drop1(self.conv1(x)))))
+       x = F.relu(self.maxPool2(self.conv4(self.conv_drop2(self.conv3(x)))))
+       x = self.conv3(x)
        s = x.sum((1,2,3))
        return (x, s)
 
@@ -72,8 +75,8 @@ class BaselineNet_2(torch.nn.Module):
 def trainNet(net, dataloader, test_loader=None, plot=False, device='cpu'):
     net.train()
     criterion = nn.MSELoss()
-    optimizerAdam = optim.Adam(net.parameters(), weight_decay=1e-5, lr=0.00001)
-    #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizerAdam, patience=10, verbose=True)
+    optimizerAdam = optim.Adam(net.parameters(), weight_decay=1e-5, lr=0.0001)
+    optimizerAdamW = AdamW(net.parameters(),lr=0.0001)
     resetNetParameters(net)
     for epoch in range(100):  #loop over the dataset multiple times
         running_loss = 0.0
@@ -85,7 +88,7 @@ def trainNet(net, dataloader, test_loader=None, plot=False, device='cpu'):
             labels = data['landmarks']
 
             #Ranking Loss
-            n_crops = 2
+            n_crops = 10
             ranking_weight= 0.001
             crops = subImages(inputs, n_crops) #create an array that contains in each pos. subimages randomly cropped
             crops = convertNptoTorch_arr(crops, resize = True)
@@ -99,7 +102,7 @@ def trainNet(net, dataloader, test_loader=None, plot=False, device='cpu'):
                 (inputs[j], _) = randomFlip(inputs[j])
 
             # zero the parameter gradients
-            optimizerAdam.zero_grad()
+            optimizerAdamW.zero_grad()
 
             # forward + backward + optimize
             (outputs, s) = net(inputs.to(device))
@@ -107,7 +110,7 @@ def trainNet(net, dataloader, test_loader=None, plot=False, device='cpu'):
             loss_R = rankingImages(s, n_crops, labels.shape[0], device)
             loss = loss_MSE + ranking_weight*loss_R
             loss.backward()
-            optimizerAdam.step()
+            optimizerAdamW.step()
 
 
             # print statistics
@@ -123,8 +126,6 @@ def trainNet(net, dataloader, test_loader=None, plot=False, device='cpu'):
                 rn_loss_R = 0.0
                 if plot:
                     compareTorchImages(outputs[0], labels[0])   #show picture comparison
-
-        #scheduler.step(running_loss)
 
         if epoch % 5 == 4:
             print('MSE on test: {}'.format(testNet(net, test_loader, device)))
@@ -190,7 +191,7 @@ def meanCellsCount(prediction, target, j):
     return partialMSE
 
 def weights_init(m):
-    if isinstance(m, nn.Conv2d) or isinstance(m, nn.BatchNorm2d):
+    if isinstance(m, nn.Conv2d):
         m.reset_parameters()
 
 def resetNetParameters(net):

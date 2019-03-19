@@ -134,23 +134,30 @@ def randomCrop(image, n_crop = 1):
 def resizeImage(image, newSize=(256,256)):
     return cv2.resize(image, dsize=newSize, interpolation=cv2.INTER_CUBIC)
 
-def randomFlip(image, label=None, p=0.5):
+def randomFlip(image, label=None, p=0.25):
     lab = False
     if torch.is_tensor(image):
         image = convertTorchToNp(image)    #WARNING: return a shaped np H x W,  NOT  H x W x 1
         if torch.is_tensor(label):
             label = convertTorchToNp(label)
             lab = True
-    vert_or_hor = random.random()
-    if random.random() < p:
-        if vert_or_hor < 0.5:
+    nut = random.random()
+    if nut > p:
+        if nut < 0.5:
             if lab:
                 label = np.flipud(label).copy()
             image = np.flipud(image).copy()
             return (convertNptoTorch(image), convertNptoTorch(label))
-        else:
+        elif nut < 0.75:
             if lab:
                 label = np.fliplr(label).copy()
+            image = np.fliplr(image).copy()
+            return (convertNptoTorch(image), convertNptoTorch(label))
+        elif nut < 1.0:
+            if lab:
+                label = np.flipud(label).copy()
+                label = np.fliplr(label).copy()
+            image = np.flipud(image).copy()
             image = np.fliplr(image).copy()
             return (convertNptoTorch(image), convertNptoTorch(label))
     return (convertNptoTorch(image), convertNptoTorch(label))
