@@ -4,7 +4,6 @@ import torch
 import csv
 import pandas as pd
 from skimage import io, transform
-from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -17,15 +16,22 @@ np.set_printoptions(threshold=np.nan)
 
 class CellsDataset(Dataset):
 
-    def __init__(self, root_dir, shuffle=True, transform=None):
-        if shuffle:
-            csv_file = 'cells_landmarks_rand.csv'
+    def __init__(self, root_dir, shuffle=True, transform=None, new = False):
+        if new:
+            if shuffle:
+                csv_file = 'cells_n_landmarks_rand.csv'
+            else:
+                csv_file = 'cells_n_landmarks.csv'
         else:
-            csv_file = 'cells_landmarks.csv'
+            if shuffle:
+                csv_file = 'cells_landmarks_rand.csv'
+            else:
+                csv_file = 'cells_landmarks.csv'
         self.landmarks_frame = pd.read_csv(csv_file, error_bad_lines=False)
         self.root_dir = root_dir
         self.transform = transform
         self.rowCount = self.landmarks_frame.apply(lambda x: x.count(), axis=1)
+        self.new = new
 
     def __len__(self):
         return len(self.landmarks_frame)
@@ -34,7 +40,10 @@ class CellsDataset(Dataset):
         img_path = os.path.join(self.root_dir, self.landmarks_frame.iloc[idx, 0])
         image = io.imread(img_path)
         image = conv2grayFrB(image)
-        dots_path = os.path.join(self.root_dir, convertFileName(self.landmarks_frame.iloc[idx, 0]))
+        if self.new:
+            dots_path = os.path.join(self.root_dir, convertFileName_n(self.landmarks_frame.iloc[idx, 0]))
+        else:
+            dots_path = os.path.join(self.root_dir, convertFileName(self.landmarks_frame.iloc[idx, 0]))
         landmarks = io.imread(dots_path)
         landmarks = createHeatMap(landmarks, (64,64))
         sample = {'image': image, 'landmarks': landmarks}
@@ -65,6 +74,15 @@ def convertFileName(string1):
     string[4] = 'o'
     string[5] = 't'
     string[6] = 's'
+    newString = "".join(string)
+    return newString
+
+def convertFileName_n(string1):
+    string = list(string1)
+    string[4] = 'd'
+    string[5] = 'o'
+    string[6] = 't'
+    string[7] = 's'
     newString = "".join(string)
     return newString
 

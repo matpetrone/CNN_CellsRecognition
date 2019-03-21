@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="ultron" createEmptyFolders="true" autoUploadExternalChanges="true">
+    <serverData>
+      <paths name="ultron">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/equilibrium/andy_tesi_1/workspace/cells_recognition" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>

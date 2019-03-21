@@ -31,27 +31,6 @@ class BaselineNet(torch.nn.Module):
        return (x, s)
 
 
-class BaselineNet_drop(torch.nn.Module):
-   def __init__(self):
-       super(BaselineNet_drop, self).__init__()
-       self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
-       self.conv2 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
-       self.conv_drop1 = nn.Dropout2d()
-       self.maxPool1 = nn.MaxPool2d(2,stride=2)
-       self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-       self.conv4 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
-       self.conv_drop2 = nn.Dropout2d()
-       self.maxPool2 = nn.MaxPool2d(2, stride=2)
-       self.conv5 = nn.Conv2d(64, 1, kernel_size=3, padding=1)
-       self.conv3_drop = nn.Dropout2d()
-
-   def forward(self, x):
-       x = F.relu(self.maxPool1(self.conv2(self.conv_drop1(self.conv1(x)))))
-       x = F.relu(self.maxPool2(self.conv4(self.conv_drop2(self.conv3(x)))))
-       x = self.conv3(x)
-       s = x.sum((1,2,3))
-       return (x, s)
-
 class BaselineNet_2(torch.nn.Module):
    def __init__(self):
        super(BaselineNet_2, self).__init__()
@@ -75,10 +54,10 @@ class BaselineNet_2(torch.nn.Module):
 def trainNet(net, dataloader, test_loader=None, plot=False, device='cpu'):
     net.train()
     criterion = nn.MSELoss()
-    optimizerAdam = optim.Adam(net.parameters(), weight_decay=1e-5, lr=0.0001)
+    #optimizerAdam = optim.Adam(net.parameters(), weight_decay=1e-5, lr=0.0001)
     optimizerAdamW = AdamW(net.parameters(),lr=0.0001)
     resetNetParameters(net)
-    for epoch in range(300):  #loop over the dataset multiple times
+    for epoch in range(100):  #loop over the dataset multiple times
         running_loss = 0.0
         rn_loss_MSE = 0.0
         rn_loss_R = 0.0
@@ -88,8 +67,8 @@ def trainNet(net, dataloader, test_loader=None, plot=False, device='cpu'):
             labels = data['landmarks']
 
             #Ranking Loss
-            n_crops = 3
-            ranking_weight= 0.0001
+            n_crops = 2
+            ranking_weight= 0.1
             crops = subImages(inputs, n_crops) #create an array that contains in each pos. subimages randomly cropped
             crops = convertNptoTorch_arr(crops, resize = True)
             inputs = torch.cat((inputs,crops),0)
@@ -127,9 +106,10 @@ def trainNet(net, dataloader, test_loader=None, plot=False, device='cpu'):
                 if plot:
                     compareTorchImages(outputs[0], labels[0])   #show picture comparison
 
-        if epoch % 5 == 4:
+        if epoch % 1 == 0:
             print('MSE on test: {}'.format(testNet(net, test_loader, device)))
     print('Finished Training')
+
 
 
 #TESTING
